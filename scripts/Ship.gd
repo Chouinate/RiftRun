@@ -1,129 +1,100 @@
-extends CharacterBody2D
+## Ship.gd
+## The player ship hovers in orbit around the planet.
+## Click anywhere → ship rotates to that angle → fires laser.
+extends Node2D
 
-signal ore_collected(amount: int)
+signal laser_fired(angle: float)
 
-const FRICTION      := 0.82
-const WORLD_BOUNDS  := Rect2(60.0, 60.0, 3080.0, 2280.0)
+const ORBIT_RADIUS  := 280.0
+const ROTATE_SPEED  := 2.8   # rad / sec
+const COOLDOWN_TIME := 0.55  # seconds after firing before IDLE again
 
-var mining_target: Area2D = null
-var is_mining: bool       = false
-var _mine_timer: float    = 0.0
-var _mine_progress: float = 0.0
-var _round_active: bool   = true
+enum State { IDLE, ROTATING, FIRING, COOLDOWN }
 
-# Engine glow tweak while moving
-var _moving: bool = false
+var current_angle: float = -PI * 0.5   # start at top of planet
+var target_angle:  float = -PI * 0.5
+var _state:        State = State.IDLE
+var _cooldown:     float = 0.0
 
-@onready var visual: Polygon2D          = $Visual
-@onready var engine_glow: Polygon2D     = $EngineGlow
-@onready var mining_area: Area2D        = $MiningArea
-@onready var mining_col: CollisionShape2D = $MiningArea/CollisionShape2D
+# Thruster animation
+var _engine_flicker: float = 0.0
 
 func _ready() -> void:
-	add_to_group("player")
-	_refresh_mining_shape()
-	mining_area.area_entered.connect(_on_mining_area_entered)
-	mining_area.area_exited.connect(_on_mining_area_exited)
+	_refresh_position()
 
-func _refresh_mining_shape() -> void:
-	var circle = CircleShape2D.new()
-	circle.radius = GameManager.get_mining_range()
-	mining_col.shape = circle
+func is_busy() -> bool:
+	return _state != State.IDLE
 
-func _physics_process(delta: float) -> void:
-	if not _round_active:
+func move_to_angle(angle: float) -> void:
+	if _state != State.IDLE:
 		return
+	target_angle = angle
+	_state       = State.ROTATING
 
-	# ── Movement ────────────────────────────────────────────────
-	var dir := _get_input_dir()
-	var speed := GameManager.get_ship_speed()
+func _process(delta: float) -> void:
+	_engine_flicker += delta * 8.0
 
-	if dir != Vector2.ZERO:
-		velocity = velocity.lerp(dir * speed, 0.18)
-		# Rotate ship visual toward movement direction
-		visual.rotation    = lerp_angle(visual.rotation, dir.angle() + PI * 0.5, 0.25)
-		engine_glow.rotation = visual.rotation
-		_moving = true
+	match _state:
+		State.ROTATING:
+			var diff := angle_difference(current_angle, target_angle)
+			var step := ROTATE_SPEED * delta
+			if absf(diff) <= step:
+				current_angle = target_angle
+				_state        = State.FIRING
+				_do_fire()
+			else:
+				current_angle += signf(diff) * step
+
+		State.COOLDOWN:
+			_cooldown -= delta
+			if _cooldown <= 0.0:
+				_state = State.IDLE
+
+	_refresh_position()
+	queue_redraw()
+
+func _refresh_position() -> void:
+	position = Vector2(cos(current_angle), sin(current_angle)) * ORBIT_RADIUS
+	# Nose (-Y in local space) should face the planet centre (0,0 in parent space)
+	var to_centre := (Vector2.ZERO - position).normalized()
+	rotation      = to_centre.angle() + PI * 0.5
+
+func _do_fire() -> void:
+	_state    = State.COOLDOWN
+	_cooldown = COOLDOWN_TIME
+	emit_signal("laser_fired", current_angle)
+
+func _draw() -> void:
+	# Ship body — nose at local (0, -len), pointing toward planet
+	var body := PackedVector2Array([
+		Vector2( 0,  -18),   # nose
+		Vector2( 11,   5),
+		Vector2(  6,  11),
+		Vector2(  4,  20),
+		Vector2( -4,  20),
+		Vector2( -6,  11),
+		Vector2(-11,   5),
+	])
+	var hull_col := Color(0.18, 0.82, 1.00)
+	draw_colored_polygon(body, PackedColorArray([hull_col] * body.size()))
+
+	# Cockpit window
+	draw_circle(Vector2(0, -8), 4.0, Color(0.6, 0.95, 1.0, 0.9))
+
+	# Engine exhaust (bottom)
+	var moving := (_state == State.ROTATING)
+	if moving:
+		var flicker_a := 0.6 + 0.4 * sin(_engine_flicker)
+		draw_circle(Vector2(0, 20), 5.5, Color(1.0, 0.45, 0.10, flicker_a))
+		draw_circle(Vector2(0, 22), 3.0, Color(1.0, 0.80, 0.30, flicker_a * 0.7))
 	else:
-		velocity *= FRICTION
-		_moving = false
+		# Dim idle glow
+		draw_circle(Vector2(0, 20), 3.5, Color(1.0, 0.35, 0.05, 0.35))
 
-	move_and_slide()
+	# Wing accents
+	draw_line(Vector2(-11, 5), Vector2(-14, 14), Color(0.1, 0.55, 0.95), 1.5)
+	draw_line(Vector2( 11, 5), Vector2( 14, 14), Color(0.1, 0.55, 0.95), 1.5)
 
-	# Clamp to world bounds
-	position.x = clamp(position.x, WORLD_BOUNDS.position.x, WORLD_BOUNDS.end.x)
-	position.y = clamp(position.y, WORLD_BOUNDS.position.y, WORLD_BOUNDS.end.y)
-
-	# Engine glow visibility
-	engine_glow.visible = _moving
-
-	# ── Mining ───────────────────────────────────────────────────
-	if is_mining:
-		if not is_instance_valid(mining_target) or mining_target.is_depleted:
-			_cancel_mining()
-			return
-		_mine_timer -= delta
-		_mine_progress = 1.0 - clamp(_mine_timer / GameManager.get_mining_time(), 0.0, 1.0)
-		mining_target.set_mining_progress(_mine_progress)
-		if _mine_timer <= 0.0:
-			_complete_mine()
-	else:
-		# Cargo full → no mining
-		if GameManager.cargo < GameManager.get_cargo_cap():
-			_pick_nearest_ore()
-
-func _get_input_dir() -> Vector2:
-	var dir := Vector2.ZERO
-	if Input.is_action_pressed("ui_up")    or Input.is_key_pressed(KEY_W): dir.y -= 1.0
-	if Input.is_action_pressed("ui_down")  or Input.is_key_pressed(KEY_S): dir.y += 1.0
-	if Input.is_action_pressed("ui_left")  or Input.is_key_pressed(KEY_A): dir.x -= 1.0
-	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D): dir.x += 1.0
-	return dir.normalized() if dir.length() > 0.0 else Vector2.ZERO
-
-func _pick_nearest_ore() -> void:
-	var overlapping := mining_area.get_overlapping_areas()
-	if overlapping.is_empty():
-		return
-	var best_ore: Area2D  = null
-	var best_dist: float  = INF
-	for area in overlapping:
-		if area.is_in_group("ore") and not area.is_depleted:
-			var d := area.global_position.distance_to(global_position)
-			if d < best_dist:
-				best_dist = d
-				best_ore  = area
-	if best_ore:
-		_start_mining(best_ore)
-
-func _start_mining(ore: Area2D) -> void:
-	mining_target  = ore
-	is_mining      = true
-	_mine_timer    = GameManager.get_mining_time()
-	_mine_progress = 0.0
-
-func _complete_mine() -> void:
-	if is_instance_valid(mining_target):
-		var amount := mining_target.ore_value
-		mining_target.deplete()
-		GameManager.add_cargo(amount)
-		emit_signal("ore_collected", amount)
-	_cancel_mining()
-
-func _cancel_mining() -> void:
-	if is_instance_valid(mining_target):
-		mining_target.set_mining_progress(0.0)
-	mining_target  = null
-	is_mining      = false
-	_mine_timer    = 0.0
-	_mine_progress = 0.0
-
-func _on_mining_area_entered(_area: Area2D) -> void:
-	pass  # handled in _physics_process
-
-func _on_mining_area_exited(area: Area2D) -> void:
-	if area == mining_target:
-		_cancel_mining()
-
-func stop_round() -> void:
-	_round_active = false
-	velocity = Vector2.ZERO
+	# Ready indicator ring when IDLE (subtle teal ring)
+	if _state == State.IDLE:
+		draw_arc(Vector2.ZERO, 26.0, 0.0, TAU, 24, Color(0.15, 1.0, 0.55, 0.35), 1.5)

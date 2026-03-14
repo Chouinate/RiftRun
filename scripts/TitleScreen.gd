@@ -48,7 +48,7 @@ func _build_ui() -> void:
 	add_child(title)
 
 	var sub := Label.new()
-	sub.text = "mine the void  ·  play the market  ·  rule the rift"
+	sub.text = "drill the planet  ·  read the market  ·  rule the rift"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.position = Vector2(cx - 300.0, cy - 90.0)
 	sub.size     = Vector2(600.0, 30.0)
@@ -62,7 +62,7 @@ func _build_ui() -> void:
 
 	# ── Version tag ───────────────────────────────────────────────
 	var ver := Label.new()
-	ver.text     = "5 rounds · 2 corporations · upgrades between rounds"
+	ver.text     = "5 rounds  ·  limited shots  ·  2 corporations  ·  upgrades between rounds"
 	ver.position = Vector2(cx - 300.0, 675.0)
 	ver.size     = Vector2(600.0, 20.0)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -113,15 +113,17 @@ func _build_how_overlay() -> Control:
 	vbox.add_child(title)
 
 	var lines := [
-		["Controls",       "WASD  or  Arrow Keys — move your ship"],
-		["Mining",         "Fly near glowing ore crystals — your ship mines them automatically"],
-		["Cargo",          "Green = common (1 unit)  |  Cyan = uncommon (2)  |  Orange = rare (3)"],
-		["Selling",        "Fly into a corporation dock on either side of the map to sell"],
-		["Market",         "Prices change every few seconds — sell to whichever corp pays more!"],
-		["Trends",         "▲ = rising price   ▼ = falling price"],
-		["Round end",      "The round ends when time runs out or all crystals are mined"],
-		["Upgrades",       "Spend credits in the shop between rounds to improve your ship"],
-		["Goal",           "Earn as many credits as you can across 5 rounds"],
+		["Drilling",  "Click anywhere on or near the planet to drill there"],
+		["Movement",  "The ship orbits around the planet and rotates to your click angle"],
+		["Laser",     "It fires a laser inward — collecting every ore crystal in its path"],
+		["Ore types", "Green = common (1 unit)  |  Cyan = uncommon (2)  |  Orange = rare (3)"],
+		["Depth",     "By default the laser reaches ~55% of the planet — upgrade Deep Beam for more"],
+		["Shots",     "You have a limited number of shots — choose your angles wisely!"],
+		["Selling",   "Use the sell buttons at the bottom of the screen to offload your cargo"],
+		["Market",    "Prices for each corp change every few seconds — sell to whoever pays more"],
+		["Trends",    "▲ = rising    ▼ = falling    wait for the peak before you sell"],
+		["Scanner",   "Buy the Surface Scanner upgrade to see faint ore hints on the planet surface"],
+		["Goal",      "Maximise credits across 5 rounds — each planet has more and richer ore"],
 	]
 
 	for pair in lines:
