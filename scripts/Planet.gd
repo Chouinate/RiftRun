@@ -51,7 +51,7 @@ func setup(round_num: int, show_scanner: bool) -> void:
 
 func get_ore_remaining() -> int:
 	var n := 0
-	for key in _grid:
+	for key: Vector2i in _grid:
 		if (_grid[key] as int) > Cell.ROCK:
 			n += 1
 	return n
@@ -160,7 +160,7 @@ func _place_blobs(rng: RandomNumberGenerator, ore_type: int,
 				_grid[cur] = ore_type
 				placed += 1
 
-			for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 				var nb := cur + d
 				if not visited.has(nb) and _grid.has(nb) and rng.randf() < 0.68:
 					visited[nb] = true
@@ -171,12 +171,12 @@ func _compute_surface_hints() -> void:
 	_surface_hints.clear()
 	var dirs_4 := [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
 
-	for key in _grid:
+	for key: Vector2i in _grid:
 		if (_grid[key] as int) != Cell.ROCK:
 			continue
 		# Surface cell = has at least one neighbour outside the planet
 		var is_surface := false
-		for d in dirs_4:
+		for d: Vector2i in dirs_4:
 			if not _grid.has(key + d):
 				is_surface = true
 				break
@@ -213,7 +213,7 @@ func _draw() -> void:
 
 	# ── Grid cells ─────────────────────────────────────────────────
 	var hcs := CELL_SIZE * 0.5
-	for key in _grid:
+	for key: Vector2i in _grid:
 		var ctype: int = _grid[key]
 		var wp    := Vector2(key.x * CELL_SIZE, key.y * CELL_SIZE)
 		var rect  := Rect2(wp.x - hcs, wp.y - hcs, CELL_SIZE, CELL_SIZE)
@@ -238,7 +238,7 @@ func _draw() -> void:
 
 	# ── Scanner surface hints ──────────────────────────────────────
 	if _show_scanner:
-		for key in _surface_hints:
+		for key: Vector2i in _surface_hints:
 			if _grid.get(key, Cell.EMPTY) == Cell.ROCK:
 				var wp   := Vector2(key.x * CELL_SIZE, key.y * CELL_SIZE)
 				var hint_col: Color = _surface_hints[key]
