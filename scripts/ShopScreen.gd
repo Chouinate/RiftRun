@@ -53,7 +53,7 @@ func _build_ui() -> void:
 	add_child(blurb)
 
 	# Upgrade cards
-	var keys   := GameManager.upgrades.keys()
+	var keys: Array = GameManager.upgrades.keys()
 	var cols   := 3
 	var card_w := 270.0
 	var card_h := 185.0
@@ -108,7 +108,7 @@ func _build_card(key: String, pos: Vector2, sz: Vector2) -> void:
 
 	# Name
 	var name_lbl := Label.new()
-	name_lbl.text = u["name"].to_upper()
+	name_lbl.text = (u["name"] as String).to_upper()
 	name_lbl.position = inner_pos
 	name_lbl.size     = Vector2(sz.x - pad * 2, 24)
 	name_lbl.add_theme_font_size_override("font_size", 15)
@@ -117,7 +117,7 @@ func _build_card(key: String, pos: Vector2, sz: Vector2) -> void:
 
 	# Description
 	var desc_lbl := Label.new()
-	desc_lbl.text = u["desc"]
+	desc_lbl.text = u["desc"] as String
 	desc_lbl.position = inner_pos + Vector2(0, 26)
 	desc_lbl.size     = Vector2(sz.x - pad * 2, 44)
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -21,8 +21,8 @@ const PlanetScript := preload("res://scripts/Planet.gd")
 const ShipScript   := preload("res://scripts/Ship.gd")
 
 # ── Node refs ──────────────────────────────────────────────────────
-var planet: Node2D
-var ship:   Node2D
+var planet
+var ship
 
 # ── Round state ────────────────────────────────────────────────────
 var _shots_left:    int   = 0
@@ -99,7 +99,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not (event is InputEventMouseButton):
 		return
-	if not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+	var mb := event as InputEventMouseButton
+	if not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if ship.is_busy():
 		return
@@ -107,7 +108,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	# Convert click to planet-local coordinates
-	var local_click: Vector2 = (event as InputEventMouseButton).position - PLANET_POS
+	var local_click: Vector2 = mb.position - PLANET_POS
 	# Accept clicks within ~1.5× planet radius of planet centre
 	if local_click.length() > planet.PLANET_RADIUS * 1.55:
 		return
