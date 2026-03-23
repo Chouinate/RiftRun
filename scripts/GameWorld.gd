@@ -107,7 +107,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	# Convert click to planet-local coordinates
-	var local_click := event.position - PLANET_POS
+	var local_click: Vector2 = (event as InputEventMouseButton).position - PLANET_POS
 	# Accept clicks within ~1.5× planet radius of planet centre
 	if local_click.length() > planet.PLANET_RADIUS * 1.55:
 		return
@@ -304,7 +304,7 @@ func _mk(parent: Node, text: String, pos: Vector2, fs: int, col: Color) -> Label
 # Signal handlers
 # ─────────────────────────────────────────────────────────────────
 func _on_laser_fired(angle: float) -> void:
-	var mined := planet.fire_laser(
+	var mined: int = planet.fire_laser(
 		angle,
 		GameManager.get_laser_depth(),
 		GameManager.get_laser_width()
