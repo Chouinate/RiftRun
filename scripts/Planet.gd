@@ -224,7 +224,7 @@ func _draw() -> void:
 				draw_rect(rect, Color(0.008, 0.008, 0.025))
 
 			Cell.ROCK:
-				var shade_idx := (abs(key.x * 3 + key.y * 7)) % ROCK_SHADES.size()
+				var shade_idx: int = absi(key.x * 3 + key.y * 7) % ROCK_SHADES.size()
 				draw_rect(rect, ROCK_SHADES[shade_idx])
 
 			_:  # ore
