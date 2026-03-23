@@ -186,7 +186,7 @@ func _compute_surface_hints() -> void:
 
 		# Probe inward (toward centre) up to 6 cells
 		var toward_centre := -Vector2(key.x, key.y).normalized()
-		var best_type     := Cell.EMPTY
+		var best_type: int = Cell.EMPTY
 		var best_val      := 0
 		for step in range(1, 7):
 			var probe := Vector2(key.x, key.y) + toward_centre * step
