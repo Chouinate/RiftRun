@@ -66,8 +66,8 @@ func _build_ui() -> void:
 
 	for i in keys.size():
 		var key: String = keys[i] as String
-		var col := i % cols
-		var row := i / cols
+		var col: int = i % cols
+		var row: int = i / cols
 		var pos := Vector2(start_x + col * (card_w + gap_x), start_y + row * (card_h + gap_y))
 		_build_card(key, pos, Vector2(card_w, card_h))
 
