@@ -16,13 +16,9 @@ const ORBIT_RADIUS  := 280.0                    # must match Ship.ORBIT_RADIUS
 const PRICE_INTERVAL_MIN := 6.0
 const PRICE_INTERVAL_MAX := 12.0
 
-# ── Preloads ───────────────────────────────────────────────────────
-const PlanetScript := preload("res://scripts/Planet.gd")
-const ShipScript   := preload("res://scripts/Ship.gd")
-
 # ── Node refs ──────────────────────────────────────────────────────
-var planet
-var ship
+var planet: Planet
+var ship:   Ship
 
 # ── Round state ────────────────────────────────────────────────────
 var _shots_left:    int   = 0
@@ -61,17 +57,15 @@ func _ready() -> void:
 # Spawning
 # ─────────────────────────────────────────────────────────────────
 func _spawn_planet() -> void:
-	planet          = Node2D.new()
+	planet          = Planet.new()
 	planet.position = PLANET_POS
-	planet.set_script(PlanetScript)
 	add_child(planet)
 	planet.ore_mined.connect(_on_ore_mined)
 	planet.setup(GameManager.round_num, GameManager.has_scanner())
 
 func _spawn_ship() -> void:
-	ship          = Node2D.new()
+	ship          = Ship.new()
 	ship.position = PLANET_POS   # will be overridden by Ship._ready
-	ship.set_script(ShipScript)
 	# Ship's _refresh_position puts it relative to its own position being planet centre,
 	# so we actually parent it under planet for local-space orbit.
 	planet.add_child(ship)
@@ -305,7 +299,7 @@ func _mk(parent: Node, text: String, pos: Vector2, fs: int, col: Color) -> Label
 # Signal handlers
 # ─────────────────────────────────────────────────────────────────
 func _on_laser_fired(angle: float) -> void:
-	var mined: int = planet.fire_laser(
+	var mined := planet.fire_laser(
 		angle,
 		GameManager.get_laser_depth(),
 		GameManager.get_laser_width()

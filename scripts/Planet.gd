@@ -1,6 +1,7 @@
 ## Planet.gd
 ## Manages a circular grid representing a planet cross-section.
 ## Ore veins are hidden inside rock; the player drills by angle to reveal them.
+class_name Planet
 extends Node2D
 
 signal ore_mined(ore_type: int, value: int)

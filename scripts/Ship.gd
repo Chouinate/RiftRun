@@ -1,6 +1,7 @@
 ## Ship.gd
 ## The player ship hovers in orbit around the planet.
 ## Click anywhere → ship rotates to that angle → fires laser.
+class_name Ship
 extends Node2D
 
 signal laser_fired(angle: float)
