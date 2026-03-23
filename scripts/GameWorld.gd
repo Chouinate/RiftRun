@@ -19,26 +19,28 @@ const PRICE_INTERVAL_MAX := 12.0
 # ── Node refs ──────────────────────────────────────────────────────
 var planet: Planet
 var ship:   Ship
+var _rover: Rover = null
 
 # ── Round state ────────────────────────────────────────────────────
 var _shots_left:    int   = 0
 var _round_ended:   bool  = false
+var _rover_landed:  bool  = false
 var _price_timer:   float = 0.0
 var _next_price_cd: float = 8.0
 
 # ── HUD node refs ──────────────────────────────────────────────────
-var _lbl_credits:     Label
-var _lbl_cargo:       Label
-var _lbl_round:       Label
-var _lbl_shots:       Label
-var _lbl_price_alpha: Label
-var _lbl_price_beta:  Label
-var _lbl_trend_alpha: Label
-var _lbl_trend_beta:  Label
-var _lbl_ore_left:    Label
-var _sell_popup:      Label
-var _popup_timer:     float = 0.0
-var _cargo_full_lbl:  Label
+var _lbl_credits:      Label
+var _lbl_cargo:        Label
+var _lbl_round:        Label
+var _lbl_shots:        Label
+var _lbl_price_alpha:  Label   # combined "corp · price · trend"
+var _lbl_price_beta:   Label
+var _lbl_ore_left:     Label
+var _lbl_rover_status: Label
+var _sell_popup:       Label
+var _popup_timer:      float  = 0.0
+var _cargo_full_lbl:   Label
+var _btn_end_round:    Button
 
 # ── Sell station display nodes (drawn in world) ────────────────────
 var _station_alpha: Node2D
@@ -52,6 +54,7 @@ func _ready() -> void:
 	_update_price_display()
 	_shots_left = GameManager.get_laser_shots()
 	_update_shots_label()
+	_spawn_rover()
 
 # ─────────────────────────────────────────────────────────────────
 # Spawning
@@ -61,7 +64,19 @@ func _spawn_planet() -> void:
 	planet.position = PLANET_POS
 	add_child(planet)
 	planet.ore_mined.connect(_on_ore_mined)
-	planet.setup(GameManager.round_num, GameManager.has_scanner())
+	planet.setup(GameManager.round_num)
+
+func _spawn_rover() -> void:
+	_rover = Rover.new()
+	add_child(_rover)
+	_rover.rover_landed.connect(_on_rover_landed)
+	_rover.scan_complete.connect(_on_scan_complete)
+	_rover.setup(
+		ship.global_position,
+		planet.global_position,
+		Planet.PLANET_RADIUS,
+		GameManager.get_scan_delay()
+	)
 
 func _spawn_ship() -> void:
 	ship          = Ship.new()
@@ -89,7 +104,7 @@ func _make_station(corp: String, pos: Vector2) -> Node2D:
 # Input
 # ─────────────────────────────────────────────────────────────────
 func _unhandled_input(event: InputEvent) -> void:
-	if _round_ended:
+	if _round_ended or not _rover_landed:
 		return
 	if not (event is InputEventMouseButton):
 		return
@@ -145,8 +160,8 @@ func _process(delta: float) -> void:
 	_station_alpha.queue_redraw()
 	_station_beta.queue_redraw()
 
-	# Check round-end condition: no shots left AND ship is idle
-	if _shots_left <= 0 and not ship.is_busy():
+	# Check round-end condition: no shots left AND ship is idle AND rover has landed
+	if _rover_landed and _shots_left <= 0 and not ship.is_busy():
 		_end_round()
 
 func _draw() -> void:
@@ -284,88 +299,82 @@ func _build_hud() -> void:
 	var hud := CanvasLayer.new()
 	add_child(hud)
 
-	# Top bar background
+	# ── Top bar ───────────────────────────────────────────────────
 	var bar := ColorRect.new()
 	bar.color = Color(0.04, 0.07, 0.14, 0.93)
-	bar.size  = Vector2(SCREEN_W, 58)
+	bar.size  = Vector2(SCREEN_W, 54)
 	hud.add_child(bar)
 
-	# ── Left: credits / cargo / round ─────────────────────────────
-	_lbl_credits = _mk(hud, "Credits: 0",   Vector2(12,  4), 18, Color(0.15, 1.00, 0.48))
-	_lbl_cargo   = _mk(hud, "Cargo: 0 / 15",Vector2(12, 27), 14, Color(0.35, 0.78, 1.00))
-	_lbl_round   = _mk(hud, "Round 1 / 5",  Vector2(12, 44), 11, Color(0.45, 0.56, 0.68))
+	# Left: credits / cargo / round
+	_lbl_credits = _mk(hud, "Credits: 0",    Vector2(12,  3), 18, Color(0.15, 1.00, 0.48))
+	_lbl_cargo   = _mk(hud, "Cargo: 0 / 15", Vector2(12, 26), 14, Color(0.35, 0.78, 1.00))
+	_lbl_round   = _mk(hud, "Round 1 / 5",   Vector2(12, 42), 11, Color(0.45, 0.56, 0.68))
 
-	# ── Centre: price board ────────────────────────────────────────
-	_build_price_hud(hud)
+	# Centre: rover status + planet name
+	var planet_name: String = GameManager.planet_config.get("name", "???")
+	_mk(hud, planet_name, Vector2(490, 4), 13, Color(0.55, 0.72, 0.90))
+	_lbl_rover_status = _mk(hud, "ROVER IN TRANSIT...", Vector2(490, 22), 16, Color(1.0, 0.72, 0.10))
 
-	# ── Right: shots / ore ────────────────────────────────────────
-	_lbl_shots    = _mk(hud, "Shots: 15",    Vector2(1090, 4),  18, Color(1.00, 0.82, 0.20))
-	_lbl_ore_left = _mk(hud, "Ore: --",      Vector2(1100, 30), 14, Color(0.55, 1.00, 0.75))
+	# Right: shots / ore
+	_lbl_shots    = _mk(hud, "Shots: 15", Vector2(1090,  3), 18, Color(1.00, 0.82, 0.20))
+	_lbl_ore_left = _mk(hud, "Ore: --",   Vector2(1100, 28), 14, Color(0.55, 1.00, 0.75))
 
-	# ── Sell buttons at bottom ─────────────────────────────────────
-	_build_sell_buttons(hud)
+	# ── Bottom sell bar ───────────────────────────────────────────
+	_build_sell_bar(hud)
 
 	# ── Sell popup ────────────────────────────────────────────────
-	_sell_popup = _mk(hud, "", Vector2(490, 68), 22, Color(0.15, 1.0, 0.48))
+	_sell_popup = _mk(hud, "", Vector2(490, 58), 20, Color(0.15, 1.0, 0.48))
 	_sell_popup.visible = false
 
 	# ── Cargo-full warning ────────────────────────────────────────
-	_cargo_full_lbl = _mk(hud, "⚠ CARGO FULL  —  SELL BEFORE MINING MORE!",
-		Vector2(310, 90), 17, Color(1.0, 0.82, 0.10))
+	_cargo_full_lbl = _mk(hud, "CARGO FULL  —  SEND POD BEFORE MINING MORE",
+		Vector2(330, 78), 15, Color(1.0, 0.82, 0.10))
 	_cargo_full_lbl.visible = false
 
-	# ── No-shots warning ─────────────────────────────────────────
-	# (handled via shots label colour in _update_shots_label)
+func _build_sell_bar(hud: CanvasLayer) -> void:
+	var BAR_H  := 78.0
+	var bar_y  := SCREEN_H - BAR_H
 
-func _build_price_hud(hud: CanvasLayer) -> void:
-	var bg_a := ColorRect.new()
-	bg_a.color    = Color(0.02, 0.14, 0.30, 0.90)
-	bg_a.size     = Vector2(152, 58)
-	bg_a.position = Vector2(488, 0)
-	hud.add_child(bg_a)
-
-	_mk(hud, "ASTRA CO.", Vector2(496, 3), 11, Color(0.30, 0.70, 1.00))
-	_lbl_price_alpha = _mk(hud, "-- cr", Vector2(496, 18), 20, Color(0.20, 0.70, 1.00))
-	_lbl_trend_alpha = _mk(hud, "",      Vector2(570, 22), 16, Color.WHITE)
-
-	var bg_b := ColorRect.new()
-	bg_b.color    = Color(0.28, 0.10, 0.02, 0.90)
-	bg_b.size     = Vector2(152, 58)
-	bg_b.position = Vector2(644, 0)
-	hud.add_child(bg_b)
-
-	_mk(hud, "VEGA IND.", Vector2(652, 3), 11, Color(1.00, 0.58, 0.20))
-	_lbl_price_beta  = _mk(hud, "-- cr", Vector2(652, 18), 20, Color(1.00, 0.65, 0.20))
-	_lbl_trend_beta  = _mk(hud, "",      Vector2(726, 22), 16, Color.WHITE)
-
-func _build_sell_buttons(hud: CanvasLayer) -> void:
-	# Bottom sell bar
 	var sell_bar := ColorRect.new()
-	sell_bar.color    = Color(0.04, 0.07, 0.14, 0.90)
-	sell_bar.size     = Vector2(SCREEN_W, 46)
-	sell_bar.position = Vector2(0, SCREEN_H - 46)
+	sell_bar.color    = Color(0.04, 0.07, 0.14, 0.92)
+	sell_bar.size     = Vector2(SCREEN_W, BAR_H)
+	sell_bar.position = Vector2(0, bar_y)
 	hud.add_child(sell_bar)
 
-	# Sell-to-Alpha button (left)
-	var btn_a := _make_sell_btn("SELL TO ASTRA CO.", Vector2(40, SCREEN_H - 40))
+	# ── Left: ASTRA CO. ──────────────────────────────────────────
+	_mk(hud, "ASTRA CO.", Vector2(12, bar_y + 5), 11, Color(0.30, 0.70, 1.00))
+	_lbl_price_alpha = _mk(hud, "-- cr", Vector2(12, bar_y + 20), 20, Color(0.20, 0.72, 1.00))
+
+	var btn_a := Button.new()
+	btn_a.text     = "SELL  ▶"
+	btn_a.position = Vector2(12, bar_y + 42)
+	btn_a.size     = Vector2(170, 30)
+	btn_a.add_theme_font_size_override("font_size", 13)
 	btn_a.pressed.connect(func(): _on_sell("alpha"))
 	hud.add_child(btn_a)
 
-	# Sell-to-Beta button (right)
-	var btn_b := _make_sell_btn("SELL TO VEGA IND.", Vector2(SCREEN_W - 280, SCREEN_H - 40))
+	# ── Right: VEGA IND. ──────────────────────────────────────────
+	_mk(hud, "VEGA IND.", Vector2(1100, bar_y + 5), 11, Color(1.00, 0.58, 0.20))
+	_lbl_price_beta  = _mk(hud, "-- cr", Vector2(1100, bar_y + 20), 20, Color(1.00, 0.65, 0.20))
+
+	var btn_b := Button.new()
+	btn_b.text     = "◀  SELL"
+	btn_b.position = Vector2(1098, bar_y + 42)
+	btn_b.size     = Vector2(170, 30)
+	btn_b.add_theme_font_size_override("font_size", 13)
 	btn_b.pressed.connect(func(): _on_sell("beta"))
 	hud.add_child(btn_b)
 
-	# Tip in centre
-	_mk(hud, "click the planet to drill", Vector2(500, SCREEN_H - 36), 13, Color(0.40, 0.50, 0.62))
+	# ── Centre: drill hint + end round ───────────────────────────
+	_mk(hud, "click planet to drill", Vector2(490, bar_y + 6), 11, Color(0.38, 0.48, 0.60))
 
-func _make_sell_btn(text: String, pos: Vector2) -> Button:
-	var btn := Button.new()
-	btn.text     = text
-	btn.position = pos
-	btn.size     = Vector2(240, 34)
-	btn.add_theme_font_size_override("font_size", 14)
-	return btn
+	_btn_end_round = Button.new()
+	_btn_end_round.text     = "END ROUND  ▶"
+	_btn_end_round.position = Vector2(490, bar_y + 24)
+	_btn_end_round.size     = Vector2(300, 46)
+	_btn_end_round.add_theme_font_size_override("font_size", 15)
+	_btn_end_round.pressed.connect(_end_round)
+	hud.add_child(_btn_end_round)
 
 func _mk(parent: Node, text: String, pos: Vector2, fs: int, col: Color) -> Label:
 	var lbl := Label.new()
@@ -379,6 +388,16 @@ func _mk(parent: Node, text: String, pos: Vector2, fs: int, col: Color) -> Label
 # ─────────────────────────────────────────────────────────────────
 # Signal handlers
 # ─────────────────────────────────────────────────────────────────
+func _on_rover_landed() -> void:
+	_rover_landed = true
+	_lbl_rover_status.text = "ROVER SCANNING..."
+	_lbl_rover_status.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5))
+
+func _on_scan_complete() -> void:
+	planet.reveal_hints()
+	_lbl_rover_status.text = "ORE LOCATED"
+	_lbl_rover_status.add_theme_color_override("font_color", Color(0.2, 1.0, 0.5, 0.7))
+
 func _on_laser_fired(angle: float) -> void:
 	var mined := planet.fire_laser(
 		angle,
@@ -434,13 +453,11 @@ func _update_price_display() -> void:
 	var ppa := GameManager.prev_alpha
 	var ppb := GameManager.prev_beta
 
-	_lbl_price_alpha.text = str(pa) + " cr"
-	_lbl_price_beta.text  = str(pb) + " cr"
+	_lbl_price_alpha.text = str(pa) + " cr " + _trend_ch(pa, ppa)
+	_lbl_price_alpha.add_theme_color_override("font_color", _trend_col(pa, ppa))
 
-	_lbl_trend_alpha.text = _trend_ch(pa, ppa)
-	_lbl_trend_alpha.add_theme_color_override("font_color", _trend_col(pa, ppa))
-	_lbl_trend_beta.text  = _trend_ch(pb, ppb)
-	_lbl_trend_beta.add_theme_color_override("font_color", _trend_col(pb, ppb))
+	_lbl_price_beta.text  = str(pb) + " cr " + _trend_ch(pb, ppb)
+	_lbl_price_beta.add_theme_color_override("font_color", _trend_col(pb, ppb))
 
 func _trend_ch(now: int, prev: int) -> String:
 	if now > prev: return "▲"
@@ -467,3 +484,4 @@ func _end_round() -> void:
 		GameManager.prepare_next_round()
 		await get_tree().create_timer(0.8).timeout
 		get_tree().change_scene_to_file("res://scenes/ShopScreen.tscn")
+		# ShopScreen routes to PlanetSelectScreen on continue

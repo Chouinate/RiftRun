@@ -7,7 +7,7 @@ extends Node2D
 signal laser_fired(angle: float)
 
 const ORBIT_RADIUS  := 280.0
-const ROTATE_SPEED  := 2.8   # rad / sec
+const ROTATE_SPEED  := 0.55  # rad / sec
 const COOLDOWN_TIME := 0.55  # seconds after firing before IDLE again
 
 enum State { IDLE, ROTATING, FIRING, COOLDOWN }

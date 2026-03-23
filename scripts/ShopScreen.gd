@@ -188,4 +188,4 @@ func _on_buy(key: String) -> void:
 			_refresh_card(k)
 
 func _on_next_round() -> void:
-	get_tree().change_scene_to_file("res://scenes/GameWorld.tscn")
+	get_tree().change_scene_to_file("res://scenes/PlanetSelectScreen.tscn")

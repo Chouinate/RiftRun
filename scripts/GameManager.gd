@@ -8,10 +8,33 @@ signal prices_changed(alpha: int, beta: int, prev_alpha: int, prev_beta: int)
 # ── Constants ─────────────────────────────────────────────────────
 const MAX_ROUNDS: int = 5
 
+# ── Planet configs (shown on selection screen each round) ─────────
+const PLANET_CONFIGS: Array = [
+	{
+		"name": "IXION-7",
+		"desc": "Shallow deposits, fast to map.",
+		"richness": 1.0,
+		"rare_boost": false,
+	},
+	{
+		"name": "CERES-3",
+		"desc": "Balanced ore throughout the crust.",
+		"richness": 1.2,
+		"rare_boost": false,
+	},
+	{
+		"name": "DEEP-NULL",
+		"desc": "Sparse surface, rich rare core.",
+		"richness": 0.85,
+		"rare_boost": true,
+	},
+]
+
 # ── Player State ─────────────────────────────────────────────────
-var credits:  int = 0
-var cargo:    int = 0
-var round_num: int = 1
+var credits:   int        = 0
+var cargo:     int        = 0
+var round_num: int        = 1
+var planet_config: Dictionary = PLANET_CONFIGS[0]
 
 # ── Market ───────────────────────────────────────────────────────
 var price_alpha: int = 20
@@ -40,10 +63,10 @@ var upgrades: Dictionary = {
 		"base_cost":  220, "cost_scale": 2.00
 	},
 	"scanner": {
-		"name":       "Surface Scanner",
-		"desc":       "Tints the planet surface where ore lies beneath.",
-		"level": 0,  "max_level": 1,
-		"base_cost":  320, "cost_scale": 1.00
+		"name":       "Rover Scanner",
+		"desc":       "Upgrades rover scan quality — reveals hints faster each round.",
+		"level": 0,  "max_level": 4,
+		"base_cost":  200, "cost_scale": 1.65
 	},
 	"cargo_hold": {
 		"name":       "Cargo Hold",
@@ -73,6 +96,10 @@ func get_laser_width() -> int:
 
 func has_scanner() -> bool:
 	return upgrades["scanner"]["level"] > 0
+
+## Seconds the rover takes to complete its scan (reduced by Scanner upgrade).
+func get_scan_delay() -> float:
+	return maxf(1.0, 8.0 - upgrades["scanner"]["level"] * 1.75)
 
 func get_cargo_cap() -> int:
 	return 15 + upgrades["cargo_hold"]["level"] * 15
@@ -134,9 +161,10 @@ func update_prices() -> void:
 
 # ── Game flow ─────────────────────────────────────────────────────
 func reset_for_new_game() -> void:
-	credits   = 0
-	cargo     = 0
-	round_num = 1
+	credits       = 0
+	cargo         = 0
+	round_num     = 1
+	planet_config = PLANET_CONFIGS[0]
 	for key in upgrades:
 		upgrades[key]["level"] = 0
 	price_alpha = randi_range(15, 30)

@@ -43,12 +43,16 @@ var _laser_to:    Vector2 = Vector2.ZERO
 var _laser_alpha: float   = 0.0
 
 # ── Public API ────────────────────────────────────────────────────
-func setup(round_num: int, show_scanner: bool) -> void:
-	_show_scanner = show_scanner
+func setup(round_num: int, _unused_scanner: bool = false) -> void:
+	_show_scanner = false
 	_init_grid()
 	_generate_ores(round_num)
-	if _show_scanner:
-		_compute_surface_hints()
+
+## Called by GameWorld when the rover finishes scanning.
+func reveal_hints() -> void:
+	_compute_surface_hints()
+	_show_scanner = true
+	queue_redraw()
 
 func get_ore_remaining() -> int:
 	var n := 0
@@ -119,22 +123,29 @@ func _generate_ores(round_num: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 
+	var cfg      := GameManager.planet_config
+	var rich     := float(cfg.get("richness", 1.0))
+	var rare_b   := bool(cfg.get("rare_boost", false))
+
 	# Common (green) — surface to mid
 	_place_blobs(rng, Cell.ORE_1,
-		5 + (round_num - 1) * 2,
+		int((5 + (round_num - 1) * 2) * rich),
 		4, 11,
 		PLANET_RADIUS * 0.28, PLANET_RADIUS * 0.96)
 
 	# Uncommon (cyan) — mid depth
 	_place_blobs(rng, Cell.ORE_2,
-		3 + (round_num - 1),
+		int((3 + (round_num - 1)) * rich),
 		3, 7,
 		PLANET_RADIUS * 0.08, PLANET_RADIUS * 0.65)
 
 	# Rare (orange) — deep / core
+	var rare_count := int((1 + (round_num - 1) * 0.5) * rich)
+	if rare_b:
+		rare_count = int(rare_count * 1.8) + 1
 	_place_blobs(rng, Cell.ORE_3,
-		1 + int((round_num - 1) * 0.5),
-		2, 5,
+		rare_count,
+		2 + (2 if rare_b else 0), 6 + (3 if rare_b else 0),
 		0.0, PLANET_RADIUS * 0.38)
 
 func _place_blobs(rng: RandomNumberGenerator, ore_type: int,
@@ -223,19 +234,9 @@ func _draw() -> void:
 			Cell.EMPTY:
 				draw_rect(rect, Color(0.008, 0.008, 0.025))
 
-			Cell.ROCK:
+			_:  # ROCK or ore (ore is hidden until rover scans)
 				var shade_idx: int = absi(key.x * 3 + key.y * 7) % ROCK_SHADES.size()
 				draw_rect(rect, ROCK_SHADES[shade_idx])
-
-			_:  # ore
-				var ore_col: Color = ORE_COLORS[ctype]
-				# Dim outer fill
-				draw_rect(rect, ore_col * Color(1, 1, 1, 0.30))
-				# Bright inner crystal
-				var inner := Rect2(wp.x - hcs * 0.55, wp.y - hcs * 0.55, CELL_SIZE * 0.55, CELL_SIZE * 0.55)
-				draw_rect(inner, ore_col)
-				# Tiny highlight
-				draw_rect(Rect2(wp.x - 2, wp.y - 2, 3, 3), Color(1, 1, 1, 0.6))
 
 	# ── Scanner surface hints ──────────────────────────────────────
 	if _show_scanner:

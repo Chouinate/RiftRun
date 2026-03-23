@@ -82,7 +82,7 @@ func _add_button(text: String, pos: Vector2, callback: Callable) -> void:
 # ── Button callbacks ─────────────────────────────────────────────
 func _on_start() -> void:
 	GameManager.reset_for_new_game()
-	get_tree().change_scene_to_file("res://scenes/GameWorld.tscn")
+	get_tree().change_scene_to_file("res://scenes/PlanetSelectScreen.tscn")
 
 func _on_how_to_play() -> void:
 	add_child(_build_how_overlay())
