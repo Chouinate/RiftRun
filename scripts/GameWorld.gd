@@ -168,7 +168,6 @@ func _draw_stars() -> void:
 
 func _draw_orbit_ring() -> void:
 	# Dashed orbit circle around planet
-	var steps  := 72
 	var on_len := 0.06 * TAU   # arc length of dash
 	var off_len := 0.04 * TAU
 	var t      := 0.0
