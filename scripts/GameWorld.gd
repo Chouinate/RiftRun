@@ -125,6 +125,7 @@ func _process(delta: float) -> void:
 		_price_timer   = 0.0
 		_next_price_cd = randf_range(PRICE_INTERVAL_MIN, PRICE_INTERVAL_MAX)
 		GameManager.update_prices()
+		_update_price_display()
 
 	# HUD refresh
 	_lbl_credits.text = "Credits: " + str(GameManager.credits)
@@ -182,18 +183,99 @@ func _draw_stations() -> void:
 	_draw_one_station("beta",  Vector2(SCREEN_W - 80.0, PLANET_POS.y))
 
 func _draw_one_station(corp: String, pos: Vector2) -> void:
-	var base_col := Color(0.08, 0.45, 1.0) if corp == "alpha" else Color(1.0, 0.45, 0.08)
-	# Main body
-	draw_rect(Rect2(pos.x - 22, pos.y - 28, 44, 56), base_col * Color(1,1,1,0.2))
-	draw_rect(Rect2(pos.x - 22, pos.y - 28, 44, 56), base_col * Color(1,1,1,0.6), false, 1.5)
-	# Solar panel arms
-	draw_line(pos + Vector2(-22, -10), pos + Vector2(-42, -10), base_col * Color(1,1,1,0.5), 3.0)
-	draw_line(pos + Vector2(-42, -16), pos + Vector2(-42, -4),  base_col * Color(1,1,1,0.5), 3.0)
-	draw_line(pos + Vector2( 22, -10), pos + Vector2( 42, -10), base_col * Color(1,1,1,0.5), 3.0)
-	draw_line(pos + Vector2( 42, -16), pos + Vector2( 42, -4),  base_col * Color(1,1,1,0.5), 3.0)
-	# Docking light
-	var blink := fmod(Time.get_ticks_msec() * 0.001, 1.0) > 0.5
-	draw_circle(pos + Vector2(0, 18), 4.0, base_col if blink else base_col * Color(1,1,1,0.2))
+	var base_col  := Color(0.08, 0.45, 1.0)  if corp == "alpha" else Color(1.0, 0.45, 0.08)
+	var dim_col   := Color(base_col.r, base_col.g, base_col.b, 0.18)
+	var mid_col   := Color(base_col.r, base_col.g, base_col.b, 0.55)
+	var bright    := Color(base_col.r, base_col.g, base_col.b, 0.90)
+	# Side that faces the planet
+	var bay_side  := 1  if corp == "alpha" else -1
+	# Side away from the planet (antenna side)
+	var ant_side  := -1 if corp == "alpha" else 1
+	var t := Time.get_ticks_msec() * 0.001
+
+	# ── Outer hull ring ───────────────────────────────────────────
+	var hub_pts := PackedVector2Array()
+	for i in 8:
+		var a := i * TAU / 8.0
+		hub_pts.append(pos + Vector2(cos(a), sin(a)) * 30.0)
+	draw_colored_polygon(hub_pts, dim_col)
+	draw_polyline(hub_pts + PackedVector2Array([hub_pts[0]]), bright, 1.8)
+
+	# Inner structural ring
+	var inner_pts := PackedVector2Array()
+	for i in 8:
+		var a := i * TAU / 8.0 + PI / 8.0
+		inner_pts.append(pos + Vector2(cos(a), sin(a)) * 18.0)
+	draw_polyline(inner_pts + PackedVector2Array([inner_pts[0]]), mid_col, 1.0)
+
+	# Cross-struts inside
+	draw_line(inner_pts[0], inner_pts[4], mid_col, 0.7)
+	draw_line(inner_pts[2], inner_pts[6], mid_col, 0.7)
+
+	# Centre core
+	draw_circle(pos, 7.0, dim_col)
+	draw_circle(pos, 7.0, mid_col, false)
+
+	# ── Habitat ring (slow rotation effect via blink phase) ───────
+	draw_arc(pos, 44.0, 0.0, TAU, 48, Color(base_col.r, base_col.g, base_col.b, 0.22), 7.0)
+	draw_arc(pos, 44.0, 0.0, TAU, 48, bright, 1.2)
+	# Ring spokes
+	for i in 6:
+		var a := i * TAU / 6.0
+		draw_line(pos + Vector2(cos(a), sin(a)) * 30.0,
+				  pos + Vector2(cos(a), sin(a)) * 44.0, mid_col, 1.0)
+
+	# ── Solar panel arrays (top and bottom) ──────────────────────
+	# Arm
+	draw_line(pos + Vector2(0, -30), pos + Vector2(0, -58), mid_col, 3.0)
+	draw_line(pos + Vector2(0,  30), pos + Vector2(0,  58), mid_col, 3.0)
+	# Panel bodies
+	draw_rect(Rect2(pos.x - 26, pos.y - 70, 52, 12), dim_col)
+	draw_rect(Rect2(pos.x - 26, pos.y - 70, 52, 12), mid_col, false, 1.0)
+	draw_rect(Rect2(pos.x - 26, pos.y +  58, 52, 12), dim_col)
+	draw_rect(Rect2(pos.x - 26, pos.y +  58, 52, 12), mid_col, false, 1.0)
+	# Panel cell dividers
+	for ci in 3:
+		var lx := pos.x - 26 + (ci + 1) * 13
+		draw_line(Vector2(lx, pos.y - 70), Vector2(lx, pos.y - 58), mid_col, 0.6)
+		draw_line(Vector2(lx, pos.y + 58), Vector2(lx, pos.y + 70), mid_col, 0.6)
+
+	# ── Docking bay (planet-facing side) ─────────────────────────
+	draw_line(pos + Vector2(bay_side * 30,  -12),
+			  pos + Vector2(bay_side * 50,  -18), mid_col, 2.0)
+	draw_line(pos + Vector2(bay_side * 30,   12),
+			  pos + Vector2(bay_side * 50,   18), mid_col, 2.0)
+	# Bay opening highlight
+	draw_line(pos + Vector2(bay_side * 50, -18),
+			  pos + Vector2(bay_side * 50,  18), bright, 1.5)
+	# Interior glow
+	var bay_blink := fmod(t * 0.8, 1.0) > 0.5
+	var bay_glow  := Color(base_col.r, base_col.g, base_col.b, 0.55 if bay_blink else 0.15)
+	draw_circle(pos + Vector2(bay_side * 46, 0), 5.0, bay_glow)
+
+	# ── Antenna spire (away from planet) ─────────────────────────
+	draw_line(pos + Vector2(ant_side * 30, 0),
+			  pos + Vector2(ant_side * 56, 0), mid_col, 2.0)
+	# Cross-bar
+	draw_line(pos + Vector2(ant_side * 56, -8),
+			  pos + Vector2(ant_side * 56,  8), mid_col, 1.5)
+	# Dish
+	draw_arc(pos + Vector2(ant_side * 56, 0), 9.0,
+			 -PI * 0.5 + ant_side * 0.2, PI * 0.5 + ant_side * 0.2, 12, mid_col, 1.5)
+
+	# ── Running lights ────────────────────────────────────────────
+	var b0 := fmod(t,        1.2) > 0.6
+	var b1 := fmod(t + 0.4,  1.2) > 0.6
+	var b2 := fmod(t + 0.8,  1.2) > 0.6
+	var b3 := fmod(t + 0.25, 0.8) > 0.4
+	draw_circle(pos + Vector2(0, -70), 3.5,
+		Color(1.0, 1.0, 1.0, 0.95) if b0 else Color(0.4, 0.4, 0.4, 0.3))
+	draw_circle(pos + Vector2(0,  70), 3.5,
+		Color(1.0, 0.3, 0.3, 0.95) if b1 else Color(0.4, 0.2, 0.2, 0.3))
+	draw_circle(pos + Vector2(ant_side * 56, 0), 4.0,
+		bright if b2 else Color(base_col.r, base_col.g, base_col.b, 0.15))
+	draw_circle(pos + Vector2(bay_side * 50, 0), 3.0,
+		Color(0.0, 1.0, 0.6, 0.9) if b3 else Color(0.0, 0.4, 0.2, 0.3))
 
 # ─────────────────────────────────────────────────────────────────
 # HUD
@@ -312,11 +394,34 @@ func _on_ore_mined(_ore_type: int, _value: int) -> void:
 func _on_sell(corp: String) -> void:
 	if GameManager.cargo <= 0:
 		return
-	var earned := GameManager.sell_cargo(corp)
-	if earned > 0:
-		_sell_popup.text    = "+" + str(earned) + " credits!"
-		_sell_popup.visible = true
-		_popup_timer        = 2.5
+
+	# Capture cargo and lock in the current price; zero out cargo immediately
+	var captured_cargo := GameManager.cargo
+	var locked_price   := GameManager.price_alpha if corp == "alpha" else GameManager.price_beta
+	GameManager.cargo  = 0
+	GameManager.emit_signal("cargo_changed", 0, GameManager.get_cargo_cap())
+
+	_sell_popup.text    = "Pod en route..."
+	_sell_popup.visible = true
+	_popup_timer        = 1.5
+
+	# Determine world positions
+	var pod_start := ship.global_position
+	var pod_end   := Vector2(80.0, PLANET_POS.y) if corp == "alpha" \
+					else Vector2(SCREEN_W - 80.0, PLANET_POS.y)
+
+	var pod := CargoPod.new()
+	add_child(pod)
+	pod.setup(corp, captured_cargo, pod_start, pod_end, GameManager.get_pod_speed())
+	pod.pod_arrived.connect(_on_pod_arrived.bind(locked_price))
+
+func _on_pod_arrived(corp: String, cargo_amount: int, locked_price: int) -> void:
+	var earned := cargo_amount * locked_price
+	GameManager.credits += earned
+	GameManager.emit_signal("credits_changed", GameManager.credits)
+	_sell_popup.text    = "+" + str(earned) + " credits!"
+	_sell_popup.visible = true
+	_popup_timer        = 2.5
 
 func _update_shots_label() -> void:
 	_lbl_shots.text = "Shots: " + str(_shots_left)

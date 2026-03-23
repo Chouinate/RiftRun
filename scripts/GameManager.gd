@@ -51,6 +51,12 @@ var upgrades: Dictionary = {
 		"level": 0,  "max_level": 4,
 		"base_cost":  130, "cost_scale": 1.60
 	},
+	"pod_speed": {
+		"name":       "Pod Drive",
+		"desc":       "Cargo pod flies faster to the station.",
+		"level": 0,  "max_level": 4,
+		"base_cost":  150, "cost_scale": 1.70
+	},
 }
 
 # ── Derived stat helpers ──────────────────────────────────────────
@@ -70,6 +76,9 @@ func has_scanner() -> bool:
 
 func get_cargo_cap() -> int:
 	return 15 + upgrades["cargo_hold"]["level"] * 15
+
+func get_pod_speed() -> float:
+	return 130.0 + upgrades["pod_speed"]["level"] * 55.0
 
 # ── Upgrade helpers ───────────────────────────────────────────────
 func get_upgrade_cost(key: String) -> int:
@@ -110,14 +119,16 @@ func update_prices() -> void:
 	prev_alpha = price_alpha
 	prev_beta  = price_beta
 
-	price_alpha = clamp(price_alpha + randi_range(-9, 9), 8, 58)
-	price_beta  = clamp(price_beta  + randi_range(-9, 9), 8, 58)
+	# Anti-correlated drift: shared swing pushes the two prices in opposite directions
+	var swing := randi_range(-7, 7)
+	price_alpha = clamp(price_alpha + swing + randi_range(-2, 2), 8, 58)
+	price_beta  = clamp(price_beta  - swing + randi_range(-2, 2), 8, 58)
 
-	if randf() < 0.12: price_alpha = randi_range(38, 58)
-	if randf() < 0.12: price_beta  = randi_range(38, 58)
-	if randf() < 0.06:
-		price_alpha = randi_range(8, 18)
-		price_beta  = randi_range(8, 18)
+	# Occasional individual spikes / crashes
+	if randf() < 0.10: price_alpha = randi_range(38, 58)
+	if randf() < 0.10: price_beta  = randi_range(38, 58)
+	if randf() < 0.04: price_alpha = randi_range(8, 18)
+	if randf() < 0.04: price_beta  = randi_range(8, 18)
 
 	emit_signal("prices_changed", price_alpha, price_beta, prev_alpha, prev_beta)
 
