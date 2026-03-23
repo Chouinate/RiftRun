@@ -73,7 +73,7 @@ func _build_ui() -> void:
 
 	# Continue button
 	var total_h := start_y + rows * (card_h + gap_y)
-	var btn_y   := max(total_h + 14.0, 580.0)
+	var btn_y   := maxf(total_h + 14.0, 580.0)
 	var btn := Button.new()
 	btn.text     = "NEXT ROUND  ▶"
 	btn.position = Vector2(530, btn_y)
