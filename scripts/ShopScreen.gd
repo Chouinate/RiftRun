@@ -160,31 +160,31 @@ func _refresh_card(key: String) -> void:
 
 	# Level dots
 	var dots := ""
-	for i in u["max_level"]:
-		dots += "●" if i < u["level"] else "○"
-	data["level_lbl"].text = "Level: " + dots
+	for i in int(u["max_level"]):
+		dots += "●" if i < int(u["level"]) else "○"
+	(data["level_lbl"] as Label).text = "Level: " + dots
 
-	if u["level"] >= u["max_level"]:
-		data["level_lbl"].add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
-		data["cost_lbl"].text = "MAXED OUT"
-		data["cost_lbl"].add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
-		data["buy_btn"].text     = "MAXED"
-		data["buy_btn"].disabled = true
+	if int(u["level"]) >= int(u["max_level"]):
+		(data["level_lbl"] as Label).add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+		(data["cost_lbl"] as Label).text = "MAXED OUT"
+		(data["cost_lbl"] as Label).add_theme_color_override("font_color", Color(0.4, 0.9, 0.4))
+		(data["buy_btn"] as Button).text     = "MAXED"
+		(data["buy_btn"] as Button).disabled = true
 	else:
-		data["level_lbl"].add_theme_color_override("font_color", Color(0.8, 0.8, 0.9))
+		(data["level_lbl"] as Label).add_theme_color_override("font_color", Color(0.8, 0.8, 0.9))
 		var cost := GameManager.get_upgrade_cost(key)
-		data["cost_lbl"].text = "Cost: " + str(cost) + " credits"
+		(data["cost_lbl"] as Label).text = "Cost: " + str(cost) + " credits"
 		var can_afford := GameManager.can_afford_upgrade(key)
-		data["cost_lbl"].add_theme_color_override("font_color",
+		(data["cost_lbl"] as Label).add_theme_color_override("font_color",
 			Color(1.0, 0.70, 0.15) if can_afford else Color(0.7, 0.35, 0.35))
-		data["buy_btn"].text     = "BUY UPGRADE"
-		data["buy_btn"].disabled = not can_afford
+		(data["buy_btn"] as Button).text     = "BUY UPGRADE"
+		(data["buy_btn"] as Button).disabled = not can_afford
 
 func _on_buy(key: String) -> void:
 	if GameManager.buy_upgrade(key):
 		_credit_lbl.text = "Credits available: " + str(GameManager.credits)
 		# Refresh all cards (affordability may have changed)
-		for k in _card_data:
+		for k: String in _card_data:
 			_refresh_card(k)
 
 func _on_next_round() -> void:
