@@ -121,20 +121,20 @@ func _generate_ores(round_num: int) -> void:
 	# Common (green) — surface to mid
 	_place_blobs(rng, Cell.ORE_1,
 		5 + (round_num - 1) * 2,
-		min_sz = 4, max_sz = 11,
-		min_r = PLANET_RADIUS * 0.28, max_r = PLANET_RADIUS * 0.96)
+		4, 11,
+		PLANET_RADIUS * 0.28, PLANET_RADIUS * 0.96)
 
 	# Uncommon (cyan) — mid depth
 	_place_blobs(rng, Cell.ORE_2,
 		3 + (round_num - 1),
-		min_sz = 3, max_sz = 7,
-		min_r = PLANET_RADIUS * 0.08, max_r = PLANET_RADIUS * 0.65)
+		3, 7,
+		PLANET_RADIUS * 0.08, PLANET_RADIUS * 0.65)
 
 	# Rare (orange) — deep / core
 	_place_blobs(rng, Cell.ORE_3,
 		1 + int((round_num - 1) * 0.5),
-		min_sz = 2, max_sz = 5,
-		min_r = 0.0, max_r = PLANET_RADIUS * 0.38)
+		2, 5,
+		0.0, PLANET_RADIUS * 0.38)
 
 func _place_blobs(rng: RandomNumberGenerator, ore_type: int,
 		count: int, min_sz: int, max_sz: int,
