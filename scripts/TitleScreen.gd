@@ -27,10 +27,10 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color(0.014, 0.020, 0.050))
 
 	# Stars with subtle twinkle
-	for s in _stars:
-		var blink := 0.5 + 0.5 * sin(_time * s["blink_speed"] + s["blink_offset"])
-		var b     := s["b"] * (0.7 + 0.3 * blink)
-		draw_circle(s["pos"], s["r"], Color(b, b, b * 1.06))
+	for s: Dictionary in _stars:
+		var blink: float = 0.5 + 0.5 * sin(_time * float(s["blink_speed"]) + float(s["blink_offset"]))
+		var b: float     = float(s["b"]) * (0.7 + 0.3 * blink)
+		draw_circle(s["pos"] as Vector2, float(s["r"]), Color(b, b, b * 1.06))
 
 # ── UI ────────────────────────────────────────────────────────────
 func _build_ui() -> void:

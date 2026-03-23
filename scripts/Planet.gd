@@ -193,7 +193,7 @@ func _compute_surface_hints() -> void:
 			if _grid.has(pk):
 				var pt: int = _grid[pk]
 				if pt > Cell.ROCK:
-					var v := ORE_VALUES[pt]
+					var v: int = ORE_VALUES[pt]
 					if v > best_val:
 						best_val  = v
 						best_type = pt

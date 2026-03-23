@@ -21,9 +21,9 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color(0.014, 0.020, 0.050))
-	for s in _stars:
-		var b: float = s["b"]
-		draw_circle(s["pos"], s["r"], Color(b, b, b))
+	for s: Dictionary in _stars:
+		var b: float = float(s["b"])
+		draw_circle(s["pos"] as Vector2, float(s["r"]), Color(b, b, b))
 
 func _build_ui() -> void:
 	var cx := 640.0
