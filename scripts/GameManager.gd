@@ -73,11 +73,11 @@ func get_cargo_cap() -> int:
 
 # ── Upgrade helpers ───────────────────────────────────────────────
 func get_upgrade_cost(key: String) -> int:
-	var u := upgrades[key]
+	var u: Dictionary = upgrades[key]
 	return int(u["base_cost"] * pow(u["cost_scale"], u["level"]))
 
 func can_afford_upgrade(key: String) -> bool:
-	var u := upgrades[key]
+	var u: Dictionary = upgrades[key]
 	return u["level"] < u["max_level"] and credits >= get_upgrade_cost(key)
 
 func buy_upgrade(key: String) -> bool:

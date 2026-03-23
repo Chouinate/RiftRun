@@ -83,7 +83,7 @@ func _build_ui() -> void:
 	add_child(btn)
 
 func _build_card(key: String, pos: Vector2, sz: Vector2) -> void:
-	var u := GameManager.upgrades[key]
+	var u: Dictionary = GameManager.upgrades[key]
 
 	# Card background
 	var card_bg := ColorRect.new()
@@ -155,8 +155,8 @@ func _build_card(key: String, pos: Vector2, sz: Vector2) -> void:
 	_refresh_card(key)
 
 func _refresh_card(key: String) -> void:
-	var u    := GameManager.upgrades[key]
-	var data := _card_data[key]
+	var u: Dictionary    = GameManager.upgrades[key]
+	var data: Dictionary = _card_data[key]
 
 	# Level dots
 	var dots := ""
