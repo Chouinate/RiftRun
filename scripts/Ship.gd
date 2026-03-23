@@ -77,7 +77,7 @@ func _draw() -> void:
 		Vector2(-11,   5),
 	])
 	var hull_col := Color(0.18, 0.82, 1.00)
-	draw_colored_polygon(body, PackedColorArray([hull_col] * body.size()))
+	draw_colored_polygon(body, hull_col)
 
 	# Cockpit window
 	draw_circle(Vector2(0, -8), 4.0, Color(0.6, 0.95, 1.0, 0.9))
