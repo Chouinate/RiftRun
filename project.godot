@@ -1,0 +1,28 @@
+; Engine configuration file.
+; It contains the essential settings used to run the project.
+; Feel free to edit this file using the project settings window or the text editor.
+config_version=5
+
+[application]
+
+config/name="RiftRun"
+config/description="Mine the void. Play the market. Rule the rift."
+run/main_scene="res://scenes/TitleScreen.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[autoload]
+
+GameManager="*res://scripts/GameManager.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/resizable=true
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
